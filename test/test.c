@@ -32,6 +32,12 @@ void may_fail(const int x) {
 		printf("\tTRY(may): x=%d\n", x);
 		if (x == 42) THROW(EXCEPTION_CODE_FAIL_ON_42, "fail on 42");
 		may_fail_also(x);
+		TRY {
+			may_fail_also(2);
+		} CATCH_ALL {
+			printf("\t\tCATCH_ALL(may): x=%d, msg=%s, exp=%d\n", x, EXCEPTION.message, EXCEPTION.code);
+		}
+		END_TRY;
 		printf("\tOK(may): x=%d\n", x);
 	}
 	CATCH_ALL {
