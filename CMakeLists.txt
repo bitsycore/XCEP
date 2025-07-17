@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Exceptions C)
+project(ExceptionsProject C)
 
-set(CMAKE_C_STANDARD 99)
-
-add_executable(Exceptions
-        main.c
-        Exceptions.c
-        Exceptions.h
-)
+add_subdirectory(exceptions)
+add_subdirectory(test)
