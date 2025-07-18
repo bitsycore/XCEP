@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #define XCEP_IMPLEMENTATION
 #include <XCEP.h>
 

@@ -2,8 +2,6 @@
 #define XCEP_CDAD39BB4CBB62BD_H
 
 #include <setjmp.h>
-#include <stddef.h>
-#include <stdlib.h>
 
 // =========================================================
 // MARK: Configuration
@@ -52,7 +50,7 @@ typedef struct XCEP_t_Frame {
 	struct XCEP_t_Frame* prev;
 } XCEP_t_Frame;
 
-typedef void (*XCEP_t_ExceptionHandler)(XCEP_t_Exception);
+typedef void (*XCEP_t_ExceptionHandler)(const XCEP_t_Exception*);
 
 // =========================================================
 // MARK: Stack
@@ -66,36 +64,32 @@ extern XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack;
 
 extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 #define XCEP_SetUncaughtExceptionHandler(handler) XCEP_g_UncaughtExceptionHandler = (handler)
-#define XCEP___RUN_IF_SET_UNCAUGHT_EXCEPTIONS_HANDLER(_exception) \
-	else if (XCEP_g_UncaughtExceptionHandler) { \
-		XCEP_g_UncaughtExceptionHandler(_exception); \
-	}
 
 #if XCEP_CONF_ENABLE_THREAD_SAFE
-	#define XCEP_SetThreadUncaughtExceptionHandler(handler) XCEP_g_ThreadUncaughtExceptionHandler = (handler)
 	extern XCEP_THREAD_LOCAL XCEP_t_ExceptionHandler XCEP_g_ThreadUncaughtExceptionHandler;
-	#define XCEP___RUN_IF_SET_THREAD_UNCAUGHT_EXCEPTIONS_HANDLER(_exception) \
-		else if (XCEP_g_ThreadUncaughtExceptionHandler) { \
-			XCEP_g_ThreadUncaughtExceptionHandler(_exception);\
-		}
+	#define XCEP_SetThreadUncaughtExceptionHandler(handler) XCEP_g_ThreadUncaughtExceptionHandler = (handler)
+	#define XCEP___IF_THREAD(_bool) (_ptr)
 #else
-	#define XCEP___RUN_IF_SET_THREAD_UNCAUGHT_EXCEPTIONS_HANDLER(_exception)
+	#define XCEP___IF_THREAD(_bool) (NULL)
 #endif
+
 
 // =========================================================
 // MARK: Functions Def
 // =========================================================
 
 void XCEP___UpdateException(XCEP_t_Frame* frame, int code, const char* message, const char* function, const char* file, int line);
-void XCEP___PrintException(const char* format, XCEP_t_Exception exception);
+void XCEP___PrintException(const char* format, const XCEP_t_Exception* exception);
+void XCEP___Thrown(const XCEP_t_Exception *exception);
+void XCEP___EndTry(int XCEP_v_hasThrown, const XCEP_t_Frame* XCEP_v_CurrentFrame);
+void XCEP___Rethrow(XCEP_t_Frame* XCEP_v_CurrentFrame);
 
 // =========================================================
 // MARK: Exception Print
 // =========================================================
 
-#define XCEP___FormatException(_text) _text " (%d) caused by: \"%s\"\n\tat %s(%s:%d)\n"
-#define XCEP___UncaughtPrintException(_exception) XCEP___PrintException(XCEP___FormatException("Uncaught exception"), _exception)
-#define XCEP_PrintException(_text, _exception) XCEP___PrintException(XCEP___FormatException(_text), _exception)
+#define XCEP_FormatException(_text) _text " (%d) caused by: \"%s\"\n\tat %s(%s:%d)\n"
+#define XCEP_PrintException(_text, _exception) XCEP___PrintException(XCEP_FormatException(_text), _exception)
 
 // =========================================================
 // MARK: Syntax
@@ -119,42 +113,12 @@ void XCEP___PrintException(const char* format, XCEP_t_Exception exception);
 #define XCEP_Finally if (1)
 
 #define XCEP_EndTry \
-	XCEP_g_Stack = XCEP_g_Stack->prev; \
-	if ((XCEP_v_hasThrown && !XCEP_v_CurrentFrame.handled) || XCEP_v_CurrentFrame.rethrow_request) { \
-		if (XCEP_g_Stack) { \
-			XCEP_g_Stack->exception = XCEP_v_CurrentFrame.exception; \
-			longjmp(XCEP_g_Stack->env, 1); \
-		} else { \
-			if(0){} \
-			XCEP___RUN_IF_SET_THREAD_UNCAUGHT_EXCEPTIONS_HANDLER(XCEP_v_CurrentFrame.exception) \
-			XCEP___RUN_IF_SET_UNCAUGHT_EXCEPTIONS_HANDLER(XCEP_v_CurrentFrame.exception) \
-			else { \
-				XCEP___UncaughtPrintException(XCEP_v_CurrentFrame.exception); \
-				exit(XCEP_v_CurrentFrame.exception.code); \
-			} \
-		} \
-	} \
+	XCEP___EndTry(XCEP_v_hasThrown, &XCEP_v_CurrentFrame);\
 } while (0)
 
-#define XCEP_Throw(_code, msg) do { \
-    if (XCEP_g_Stack) { \
-		XCEP___UpdateException(XCEP_g_Stack, _code, msg, __func__, __FILE__, __LINE__); \
-		longjmp(XCEP_g_Stack->env, 1); \
-	} else { \
-			XCEP_t_Exception XCEP___v_ExceptionToPrint = { _code, msg, __LINE__, __FILE__, __func__ }; \
-			if(0){} \
-			XCEP___RUN_IF_SET_THREAD_UNCAUGHT_EXCEPTIONS_HANDLER(XCEP___v_ExceptionToPrint) \
-			XCEP___RUN_IF_SET_UNCAUGHT_EXCEPTIONS_HANDLER(XCEP___v_ExceptionToPrint) \
-			else { \
-				XCEP___UncaughtPrintException(XCEP___v_ExceptionToPrint); \
-				exit(_code); \
-			} \
-	} \
-} while (0)
+#define XCEP_Throw(_code, msg) XCEP___Thrown(&(XCEP_t_Exception){ _code, msg, __LINE__, __FILE__, __func__ })
 
-#define XCEP_Rethrow do { \
-	XCEP_v_CurrentFrame.rethrow_request = 1; \
-} while (0)
+#define XCEP_Rethrow XCEP___Rethrow(&XCEP_v_CurrentFrame)
 
 // =========================================================
 // MARK: Short Commands
@@ -183,9 +147,12 @@ void XCEP___PrintException(const char* format, XCEP_t_Exception exception);
 
 // ReSharper disable CppNonInlineFunctionDefinitionInHeaderFile
 
+//#define XCEP_IMPLEMENTATION
 #ifdef XCEP_IMPLEMENTATION
 
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack = NULL;
 XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler = NULL;
@@ -193,6 +160,19 @@ XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler = NULL;
 #if XCEP_CONF_ENABLE_THREAD_SAFE
 	XCEP_THREAD_LOCAL XCEP_t_ExceptionHandler XCEP_g_ThreadUncaughtExceptionHandler = NULL;
 #endif
+
+static int XCEP___DefaultUncaughtExceptionHandler(const XCEP_t_Exception* exception) {
+	XCEP___PrintException(XCEP_FormatException("Uncaught exception"), exception);
+	exit(exception->code);
+}
+
+static int XCEP___RunIfPossible(const XCEP_t_ExceptionHandler func, const XCEP_t_Exception* exception) {
+	if (func) {
+		func(exception);
+		return 1;
+	}
+	return 0;
+}
 
 void XCEP___UpdateException(XCEP_t_Frame* frame, const int code, const char* message, const char* function, const char* file, const int line) {
 	frame->exception.code = code;
@@ -202,8 +182,46 @@ void XCEP___UpdateException(XCEP_t_Frame* frame, const int code, const char* mes
 	frame->exception.function = function;
 }
 
-void XCEP___PrintException(const char* format, const XCEP_t_Exception exception) {
-	fprintf(stderr, format, exception.code, exception.message, exception.function, exception.file, exception.line );
+void XCEP___PrintException(const char* format, const XCEP_t_Exception* exception) {
+	fprintf(stderr, format, exception->code, exception->message, exception->function, exception->file, exception->line );
+}
+
+void XCEP___Thrown(const XCEP_t_Exception *exception) {
+	XCEP_t_Frame* current_frame = XCEP_g_Stack;
+	if (current_frame) {
+		XCEP___UpdateException(current_frame, exception->code, exception->message, exception->function, exception->file, exception->line);
+		longjmp(current_frame->env, 1);
+	}
+	if (
+		// ReSharper disable once CppDFAConstantConditions
+		XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, exception))
+		||
+		XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, exception)
+		||
+		XCEP___DefaultUncaughtExceptionHandler(exception)
+	) {}
+}
+
+void XCEP___EndTry(const int XCEP_v_hasThrown, const XCEP_t_Frame* XCEP_v_CurrentFrame) {
+	XCEP_g_Stack = XCEP_g_Stack->prev;
+	if ((XCEP_v_hasThrown && !XCEP_v_CurrentFrame->handled) || XCEP_v_CurrentFrame->rethrow_request) {
+		if (XCEP_g_Stack) {
+			XCEP_g_Stack->exception = XCEP_v_CurrentFrame->exception;
+			longjmp(XCEP_g_Stack->env, 1);
+		}
+		if (
+			// ReSharper disable once CppDFAConstantConditions
+			XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &XCEP_v_CurrentFrame->exception))
+			||
+			XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &XCEP_v_CurrentFrame->exception)
+			||
+			XCEP___DefaultUncaughtExceptionHandler(&XCEP_v_CurrentFrame->exception)
+		) {}
+	}
+}
+
+void XCEP___Rethrow(XCEP_t_Frame* XCEP_v_CurrentFrame) {
+	XCEP_v_CurrentFrame->rethrow_request = 1;
 }
 
 #undef XCEP_IMPLEMENTATION
