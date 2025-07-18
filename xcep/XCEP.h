@@ -73,7 +73,6 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 	#define XCEP___IF_THREAD(_bool) (NULL)
 #endif
 
-
 // =========================================================
 // MARK: Functions Def
 // =========================================================
