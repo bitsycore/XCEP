@@ -10,50 +10,50 @@ enum Exception_Codes {
 	EXCEPTION_CODE_FAIL_ON_500 = -500
 };
 
-void uncaught_exception_handler_local(const __EXCEPTIONS_t_Exception EXCEPTION) {
-	printf("Handler LOCAL !!! Uncaught exception: %d: %s\n", EXCEPTION.code, EXCEPTION.message);
-	exit(EXCEPTION.code);
+void uncaught_exception_handler_local(const XCEP_t_Exception exception) {
+	printf("Handler LOCAL !!! Uncaught exception: %d: %s\n", exception.code, exception.message);
+	exit(exception.code);
 }
 
-void uncaught_exception_handler(const __EXCEPTIONS_t_Exception EXCEPTION) {
-	printf("Handler!!! Uncaught exception: %d: %s\n", EXCEPTION.code, EXCEPTION.message);
-	exit(EXCEPTION.code);
+void uncaught_exception_handler(const XCEP_t_Exception exception) {
+	printf("Handler!!! Uncaught exception: %d: %s\n", exception.code, exception.message);
+	exit(exception.code);
 }
 
 void may_fail_also(const int x) {
 	printf("\t\tSTART(also): x=%d\n", x);
-	if (x == 2) THROW(EXCEPTION_CODE_FAIL_ON_2, "fail on 2");
+	if (x == 2) Throw(EXCEPTION_CODE_FAIL_ON_2, "fail on 2");
 	printf("\t\tFINISH(also): x=%d\n", x);
 }
 
 void may_fail(const int x) {
 	printf("\tSTART(may)\n");
-	TRY {
+	Try {
 		printf("\tTRY(may): x=%d\n", x);
-		if (x == 42) THROW(EXCEPTION_CODE_FAIL_ON_42, "fail on 42");
+		if (x == 42) Throw(EXCEPTION_CODE_FAIL_ON_42, "fail on 42");
 		may_fail_also(x);
-		TRY {
+		Try {
 			may_fail_also(2);
-		} CATCH_ALL {
-			printf("\t\tCATCH_ALL(may): x=%d, msg=%s, exp=%d\n", x, EXCEPTION.message, EXCEPTION.code);
+		} CatchAll {
+			printf("\t\tCATCH_ALL(may): x=%d, msg=%s, exp=%d\n", x, Exception.message, Exception.code);
 		}
-		END_TRY;
+		EndTry;
 		printf("\tOK(may): x=%d\n", x);
 	}
-	CATCH_ALL {
-		printf("\tCATCH_ALL(may): x=%d, msg=%s, exp=%d\n", x, EXCEPTION.message, EXCEPTION.code);
-		RETHROW;
+	CatchAll {
+		printf("\tCATCH_ALL(may): x=%d, msg=%s, exp=%d\n", x, Exception.message, Exception.code);
+		Rethrow;
 	}
-	END_TRY;
+	EndTry;
 	printf("\tFINISH(may): x=%d\n", x);
 }
 
 int main() {
-	// SET_UNHANDLED_EXCEPTION_HANDLER(uncaught_exception_handler);
-	// SET_LOCAL_UNHANDLED_EXCEPTION_HANDLER(uncaught_exception_handler_local);
+	XCEP_SetUncaughtExceptionHandler(uncaught_exception_handler);
+	//XCEP_SetThreadUncaughtExceptionHandler(uncaught_exception_handler_local);
 
 	printf("START(main)\n");
-	TRY {
+	Try {
 		printf("TRY(main)\n");
 		may_fail(1);
 		may_fail(2);
@@ -61,13 +61,13 @@ int main() {
 		may_fail(42);
 		may_fail(4);
 	}
-	CATCH(EXCEPTION_CODE_FAIL_ON_42) {
-		printf("CATCH(main): msg=%s, exp=%d\n", EXCEPTION.message, EXCEPTION.code);
+	Catch(EXCEPTION_CODE_FAIL_ON_42) {
+		printf("CATCH(main): msg=%s, exp=%d\n", Exception.message, Exception.code);
 	}
-	FINALLY {
+	Finally {
 		printf("FINALLY(main)\n");
 	}
-	END_TRY;
+	EndTry;
 
 	printf("FINISH(main)\n");
 	return 0;
