@@ -68,7 +68,7 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 #if XCEP_CONF_ENABLE_THREAD_SAFE
 	extern XCEP_THREAD_LOCAL XCEP_t_ExceptionHandler XCEP_g_ThreadUncaughtExceptionHandler;
 	#define XCEP_SetThreadUncaughtExceptionHandler(handler) XCEP_g_ThreadUncaughtExceptionHandler = (handler)
-	#define XCEP___IF_THREAD(_bool) (_ptr)
+	#define XCEP___IF_THREAD(_bool) (_bool)
 #else
 	#define XCEP___IF_THREAD(_bool) (NULL)
 #endif
@@ -147,7 +147,6 @@ void XCEP___Rethrow(XCEP_t_Frame* XCEP_v_CurrentFrame);
 
 // ReSharper disable CppNonInlineFunctionDefinitionInHeaderFile
 
-//#define XCEP_IMPLEMENTATION
 #ifdef XCEP_IMPLEMENTATION
 
 #include <stddef.h>
@@ -188,35 +187,35 @@ void XCEP___PrintException(const char* format, const XCEP_t_Exception* exception
 
 void XCEP___Thrown(const XCEP_t_Exception *exception) {
 	XCEP_t_Frame* current_frame = XCEP_g_Stack;
+
 	if (current_frame) {
 		XCEP___UpdateException(current_frame, exception->code, exception->message, exception->function, exception->file, exception->line);
 		longjmp(current_frame->env, 1);
 	}
-	if (
-		// ReSharper disable once CppDFAConstantConditions
-		XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, exception))
-		||
-		XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, exception)
-		||
-		XCEP___DefaultUncaughtExceptionHandler(exception)
-	) {}
+
+	// ReSharper disable once CppDFAConstantConditions
+	XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, exception))
+	||
+	XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, exception)
+	||
+	XCEP___DefaultUncaughtExceptionHandler(exception);
 }
 
 void XCEP___EndTry(const int XCEP_v_hasThrown, const XCEP_t_Frame* XCEP_v_CurrentFrame) {
 	XCEP_g_Stack = XCEP_g_Stack->prev;
 	if ((XCEP_v_hasThrown && !XCEP_v_CurrentFrame->handled) || XCEP_v_CurrentFrame->rethrow_request) {
+
 		if (XCEP_g_Stack) {
 			XCEP_g_Stack->exception = XCEP_v_CurrentFrame->exception;
 			longjmp(XCEP_g_Stack->env, 1);
 		}
-		if (
-			// ReSharper disable once CppDFAConstantConditions
-			XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &XCEP_v_CurrentFrame->exception))
-			||
-			XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &XCEP_v_CurrentFrame->exception)
-			||
-			XCEP___DefaultUncaughtExceptionHandler(&XCEP_v_CurrentFrame->exception)
-		) {}
+
+		// ReSharper disable once CppDFAConstantConditions
+		XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &XCEP_v_CurrentFrame->exception))
+		||
+		XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &XCEP_v_CurrentFrame->exception)
+		||
+		XCEP___DefaultUncaughtExceptionHandler(&XCEP_v_CurrentFrame->exception);
 	}
 }
 
