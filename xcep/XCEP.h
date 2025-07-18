@@ -3,6 +3,7 @@
 
 #include <setjmp.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 // =========================================================
 // MARK: Configuration
@@ -19,14 +20,16 @@
 	#define XCEP_THREAD_LOCAL
 #elif defined(_MSC_VER)
 	#define XCEP_THREAD_LOCAL __declspec(thread)
-#elif defined(__GNUC__) || defined(__clang__)
-	#if __STDC_VERSION__ >= 201112L
+#elif defined(__clang__) || defined(__GNUC__)
+	#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && __STDC_VERSION__ < 202311L
 		#define XCEP_THREAD_LOCAL _Thread_local
 	#else
 		#define XCEP_THREAD_LOCAL __thread
 	#endif
-#else
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 	#define XCEP_THREAD_LOCAL thread_local
+#else
+	#error "Cannot determine thread-local storage specifier"
 #endif
 
 // =========================================================
@@ -178,6 +181,8 @@ void XCEP___PrintException(const char* format, XCEP_t_Exception exception);
 
 #endif // XCEP_CDAD39BB4CBB62BD_H
 
+// ReSharper disable CppNonInlineFunctionDefinitionInHeaderFile
+
 #ifdef XCEP_IMPLEMENTATION
 
 XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack = NULL;
@@ -187,7 +192,7 @@ XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler = NULL;
 	XCEP_THREAD_LOCAL XCEP_t_ExceptionHandler XCEP_g_ThreadUncaughtExceptionHandler = NULL;
 #endif
 
-inline void XCEP___UpdateException(XCEP_t_Frame* frame, const int code, const char* message, const char* function, const char* file, const int line) {
+void XCEP___UpdateException(XCEP_t_Frame* frame, const int code, const char* message, const char* function, const char* file, const int line) {
 	frame->exception.code = code;
 	frame->exception.message = message;
 	frame->exception.line = line;
@@ -195,7 +200,7 @@ inline void XCEP___UpdateException(XCEP_t_Frame* frame, const int code, const ch
 	frame->exception.function = function;
 }
 
-inline void XCEP___PrintException(const char* format, const XCEP_t_Exception exception) {
+void XCEP___PrintException(const char* format, const XCEP_t_Exception exception) {
 	fprintf(stderr, format, exception.code, exception.message, exception.function, exception.file, exception.line );
 }
 
