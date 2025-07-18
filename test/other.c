@@ -5,13 +5,13 @@
 
 #include "XCEP.h"
 
-void uncaught_exception_handler_local(const XCEP_t_Exception exception) {
-	printf("Handler LOCAL !!! Uncaught exception: %d: %s\n", exception.code, exception.message);
+void Handler_Local(const XCEP_t_Exception exception) {
+	XCEP_PrintException("Handler Local, Fatal Exception", exception);
 	exit(exception.code);
 }
 
-void uncaught_exception_handler(const XCEP_t_Exception exception) {
-	printf("Handler!!! Uncaught exception: %d: %s\n", exception.code, exception.message);
+void Handler(const XCEP_t_Exception exception) {
+	XCEP_PrintException("Handler, Fatal Exception", exception);
 	exit(exception.code);
 }
 

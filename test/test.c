@@ -7,8 +7,8 @@
 #include "other.h"
 
 int main() {
-	//XCEP_SetUncaughtExceptionHandler(uncaught_exception_handler);
-	//XCEP_SetThreadUncaughtExceptionHandler(uncaught_exception_handler_local);
+	XCEP_SetUncaughtExceptionHandler(Handler);
+	XCEP_SetThreadUncaughtExceptionHandler(Handler_Local);
 
 	printf("START(main)\n");
 	Try {

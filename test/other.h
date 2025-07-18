@@ -10,8 +10,8 @@ enum Exception_Codes {
 	EXCEPTION_CODE_FAIL_ON_500 = -500
 };
 
-void uncaught_exception_handler_local(XCEP_t_Exception exception);
-void uncaught_exception_handler(XCEP_t_Exception exception);
+void Handler_Local(XCEP_t_Exception exception);
+void Handler(XCEP_t_Exception exception);
 void may_fail_also(int x);
 void may_fail(int x);
 
