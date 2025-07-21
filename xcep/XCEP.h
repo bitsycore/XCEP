@@ -85,7 +85,7 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 void XCEP___UpdateException(XCEP_t_Frame* inFrame, int inCode, const char* inMessage, const char* inFunctionName, const char* inFile, int inLine);
 void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inException);
 void XCEP___Thrown(const XCEP_t_Exception *inException);
-void XCEP___EndTry(int inHasThrown, const volatile XCEP_t_Frame* inCurrentFrame);
+void XCEP___EndTry(int inHasThrown, const XCEP_t_Frame* inCurrentFrame);
 void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 
 // =========================================================
@@ -101,8 +101,8 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 
 #define XCEP__DECLARE_STATE_STRUCT \
     struct { \
-        volatile XCEP_t_Frame frame; \
-        volatile int thrown; \
+        XCEP_t_Frame frame; \
+        int thrown; \
         int run_once; \
     } XCEP_v_state
 
@@ -115,7 +115,7 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
     do { \
         if ( (XCEP_v_state.frame.prev = XCEP_g_Stack, \
               XCEP_g_Stack = (XCEP_t_Frame*)&XCEP_v_state.frame, \
-              XCEP_v_state.thrown = setjmp(XCEP_v_state.frame.env)) == 0 )
+              XCEP_v_state.thrown = setjmp(XCEP_v_state.frame.env) ) == 0 )
 
 #define XCEP_Catch(_code) \
 	else if (!XCEP_v_state.frame.handled && XCEP_v_state.frame.exception.code == (_code) && (XCEP_v_state.frame.handled = 1)) \
@@ -218,7 +218,7 @@ void XCEP___Thrown(const XCEP_t_Exception *inException) {
 	XCEP___DefaultUncaughtExceptionHandler(inException);
 }
 
-void XCEP___EndTry(const int inHasThrown, const volatile XCEP_t_Frame* inCurrentFrame) {
+void XCEP___EndTry(const int inHasThrown, const XCEP_t_Frame* inCurrentFrame) {
 	XCEP_g_Stack = XCEP_g_Stack->prev;
 
     int vShouldPropagate = (inHasThrown && !inCurrentFrame->handled) ||
