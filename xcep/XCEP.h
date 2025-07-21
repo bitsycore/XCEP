@@ -35,7 +35,6 @@
 // =========================================================
 
 enum XCEP_t_FrameState {
-    XCEP_FRAME_STATE_NONE = 0,
     XCEP_FRAME_STATE_RETHROW_REQUESTED = 1 << 0,
     XCEP_FRAME_STATE_THROWN_IN_CATCH = 1 << 1,
 };
@@ -65,7 +64,7 @@ typedef void (*XCEP_t_ExceptionHandler)(const XCEP_t_Exception*);
 extern XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack;
 
 // =========================================================
-// MARK: Unhandled Exception Handler
+// MARK: Unhandled CaughtException Handler
 // =========================================================
 
 extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
@@ -86,11 +85,11 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 void XCEP___UpdateException(XCEP_t_Frame* inFrame, int inCode, const char* inMessage, const char* inFunctionName, const char* inFile, int inLine);
 void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inException);
 void XCEP___Thrown(const XCEP_t_Exception *inException);
-void XCEP___EndTry(int inHasThrown, const XCEP_t_Frame* inCurrentFrame);
+void XCEP___EndTry(int inHasThrown, const volatile XCEP_t_Frame* inCurrentFrame);
 void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 
 // =========================================================
-// MARK: Exception Print
+// MARK: CaughtException Print
 // =========================================================
 
 #define XCEP_FormatException(_text) _text " (%d) caused by: \"%s\"\n\tat %s(%s:%d)\n"
@@ -100,30 +99,40 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 // MARK: Syntax
 // =========================================================
 
-#define XCEP_Try do { \
-	XCEP_t_Frame XCEP_v_CurrentFrame = {0}; \
-	XCEP_v_CurrentFrame.prev = XCEP_g_Stack; \
-	XCEP_g_Stack = &XCEP_v_CurrentFrame; \
-	int XCEP_v_hasThrown = setjmp(XCEP_v_CurrentFrame.env); \
-	if (XCEP_v_hasThrown == 0)
+#define XCEP__DECLARE_STATE_STRUCT \
+    struct { \
+        volatile XCEP_t_Frame frame; \
+        volatile int thrown; \
+        int run_once; \
+    } XCEP_v_state
+
+#define XCEP_Try \
+    for ( \
+        XCEP__DECLARE_STATE_STRUCT = { .run_once = 1 }; /*Init*/ \
+        XCEP_v_state.run_once; /*Cond*/ \
+        XCEP_v_state.run_once = 0, XCEP___EndTry(XCEP_v_state.thrown, (XCEP_t_Frame*)&XCEP_v_state.frame) /*Cleanup*/ \
+    ) \
+    do { \
+        if ( (XCEP_v_state.frame.prev = XCEP_g_Stack, \
+              XCEP_g_Stack = (XCEP_t_Frame*)&XCEP_v_state.frame, \
+              XCEP_v_state.thrown = setjmp(XCEP_v_state.frame.env)) == 0 )
 
 #define XCEP_Catch(_code) \
-	else if (!XCEP_v_CurrentFrame.handled && XCEP_v_CurrentFrame.exception.code == (_code) && (XCEP_v_CurrentFrame.handled = 1)) \
+	else if (!XCEP_v_state.frame.handled && XCEP_v_state.frame.exception.code == (_code) && (XCEP_v_state.frame.handled = 1)) \
 
 #define XCEP_CatchAll \
-    else if (!XCEP_v_CurrentFrame.handled && (XCEP_v_CurrentFrame.handled = 1)) \
+    else if (!XCEP_v_state.frame.handled && (XCEP_v_state.frame.handled = 1)) \
 
-#define XCEP_Exception XCEP_g_Stack->exception
+#define XCEP_CaughtException XCEP_g_Stack->exception
 
 #define XCEP_Finally if (1)
 
 #define XCEP_EndTry \
-	XCEP___EndTry(XCEP_v_hasThrown, &XCEP_v_CurrentFrame);\
-} while (0)
+    } while (0)
 
 #define XCEP_Throw(_code, _msg) XCEP___Thrown(&(XCEP_t_Exception){ .code = _code, .message = _msg, .line = __LINE__, .file = __FILE__, .function = __func__ })
 
-#define XCEP_Rethrow XCEP___Rethrow(&XCEP_v_CurrentFrame)
+#define XCEP_Rethrow XCEP___Rethrow((XCEP_t_Frame*)&XCEP_v_state.frame)
 
 // =========================================================
 // MARK: Short Commands
@@ -134,7 +143,7 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 	#define Try XCEP_Try
 	#define Catch(_code) XCEP_Catch(_code)
 	#define CatchAll XCEP_CatchAll
-	#define Exception XCEP_Exception
+	#define CaughtException XCEP_CaughtException
 	#define Finally XCEP_Finally
 	#define EndTry XCEP_EndTry
 	#define Throw(_code, _msg) XCEP_Throw(_code, _msg)
@@ -190,8 +199,6 @@ void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inExcep
 }
 
 void XCEP___Thrown(const XCEP_t_Exception *inException) {
-    assert(XCEP_g_Stack != NULL && "XCEP_Throw must be called within a XCEP_Try block.");
-
     XCEP_t_Frame* vCurrentFrame = XCEP_g_Stack;
 
     // Propagate inException when thrown in catch
@@ -211,7 +218,7 @@ void XCEP___Thrown(const XCEP_t_Exception *inException) {
 	XCEP___DefaultUncaughtExceptionHandler(inException);
 }
 
-void XCEP___EndTry(const int inHasThrown, const XCEP_t_Frame* inCurrentFrame) {
+void XCEP___EndTry(const int inHasThrown, const volatile XCEP_t_Frame* inCurrentFrame) {
 	XCEP_g_Stack = XCEP_g_Stack->prev;
 
     int vShouldPropagate = (inHasThrown && !inCurrentFrame->handled) ||
@@ -223,11 +230,11 @@ void XCEP___EndTry(const int inHasThrown, const XCEP_t_Frame* inCurrentFrame) {
             longjmp(XCEP_g_Stack->env, 1);
         }
 
-        XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &inCurrentFrame->exception))
+        XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, (XCEP_t_Exception*)&inCurrentFrame->exception))
         ||
-        XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &inCurrentFrame->exception)
+        XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, (XCEP_t_Exception*)&inCurrentFrame->exception)
         ||
-        XCEP___DefaultUncaughtExceptionHandler(&inCurrentFrame->exception);
+        XCEP___DefaultUncaughtExceptionHandler((XCEP_t_Exception*)&inCurrentFrame->exception);
     }
 }
 
