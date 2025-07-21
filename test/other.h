@@ -12,11 +12,11 @@ enum Exception_Codes {
 	EXCEPTION_CODE_FAIL_ON_500 = -500
 };
 
-const char* Exception_Codes_to_string(enum Exception_Codes e);
+const char* Exception_Codes_to_string(enum Exception_Codes inEnumExceptionCodes);
 
-void Handler_Local(const XCEP_t_Exception* exception);
-void Handler(const XCEP_t_Exception* exception);
-void may_fail_also(int x);
-void may_fail(int x);
+void Handler_Local(const XCEP_t_Exception* inException);
+void Handler(const XCEP_t_Exception* inException);
+void may_fail_also(int inX);
+void may_fail(int inX);
 
 #endif //OTHER_H

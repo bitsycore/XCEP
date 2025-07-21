@@ -4,8 +4,8 @@
 #include "other.h"
 
 int main() {
-	XCEP_SetUncaughtExceptionHandler(Handler);
-	XCEP_SetThreadUncaughtExceptionHandler(Handler_Local);
+	SetUncaughtExceptionHandler(Handler);
+	SetThreadUncaughtExceptionHandler(Handler_Local);
 
 	printf("START(main)\n");
 	Try {
@@ -18,6 +18,7 @@ int main() {
 	}
 	Catch(EXCEPTION_CODE_FAIL_ON_42) {
 		printf("CATCH(main): msg=%s, exp=%d\n", Exception.message, Exception.code);
+        Rethrow;
 	}
 	Finally {
 		printf("FINALLY(main)\n");
