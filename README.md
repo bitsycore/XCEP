@@ -93,7 +93,7 @@ EndTry;
 | `CatchAll`             | Catch any exception                   |
 | `Finally`              | Execute code regardless of exceptions |
 | `EndTry`               | End the try-catch block               |
-| `Throw(code, message)` | Throw an exception                    |
+| `Throw(code, message)` | Throws an exception. `message` must be a **C string literal**. |
 | `Rethrow`              | Re-throw the current exception        |
 
 ### Exception Information
