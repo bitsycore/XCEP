@@ -133,9 +133,6 @@ Configure XCEP by editing macros in the header:
 
 // Enable/disable short command names to avoid collision (default: 1)
 #define XCEP_CONF_ENABLE_SHORT_COMMANDS 1
-
-#define XCEP_IMPLEMENTATION
-#include "XCEP.h"
 ```
 
 
