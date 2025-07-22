@@ -30,6 +30,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define XCEP_CONF_ENABLE_THREAD_SAFE 1
 #define XCEP_CONF_ENABLE_SHORT_COMMANDS 1
+#define XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO 1
 
 // =========================================================
 // MARK: Utilities
@@ -63,9 +64,11 @@ enum XCEP_t_FrameState {
 typedef struct {
 	int code;
 	const char* message;
+#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
 	int line;
 	const char* file;
 	const char* function;
+#endif
 } XCEP_t_Exception;
 
 typedef struct XCEP_t_Frame {
@@ -103,22 +106,44 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 // MARK: Functions Def
 // =========================================================
 
-void XCEP___UpdateException(XCEP_t_Frame* inFrame, int inCode, const char* inMessage, const char* inFunctionName, const char* inFile, int inLine);
+void XCEP___UpdateException(
+	XCEP_t_Frame *inFrame,
+	int inCode,
+	const char *inMessage
+#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+    ,
+    const char *inFunctionName,
+    const char *inFile,
+    int inLine
+#endif
+);
+
 void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inException);
 void XCEP___Thrown(const XCEP_t_Exception *inException);
 void XCEP___EndTry(int inHasThrown, const XCEP_t_Frame* inCurrentFrame);
 void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 
 // =========================================================
-// MARK: CaughtException Print
+// MARK: Exception Print
 // =========================================================
 
+#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
 #define XCEP_FormatException(_text) _text " (%d) caused by: \"%s\"\n\tat %s(%s:%d)\n"
+#else
+#define XCEP_FormatException(_text) _text " (%d) caused by: \"%s\"\n"
+#endif
+
 #define XCEP_PrintException(_text, _exception) XCEP___PrintException(XCEP_FormatException(_text), _exception)
 
 // =========================================================
 // MARK: Syntax
 // =========================================================
+
+#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+#define XCEP_NewException(_code, _msg) (XCEP_t_Exception){ .code = _code, .message = _msg, .line = __LINE__, .file = __FILE__, .function = __func__ }
+#else
+#define XCEP_NewException(_code, _msg) (XCEP_t_Exception){ .code = _code, .message = _msg }
+#endif
 
 #define XCEP__DECLARE_STATE_STRUCT \
     struct { \
@@ -151,7 +176,7 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 #define XCEP_EndTry \
     } while (0)
 
-#define XCEP_Throw(_code, _msg) XCEP___Thrown(&(XCEP_t_Exception){ .code = _code, .message = _msg, .line = __LINE__, .file = __FILE__, .function = __func__ })
+#define XCEP_Throw(_code, _msg) XCEP___Thrown(&XCEP_NewException(_code, _msg))
 
 #define XCEP_Rethrow XCEP___Rethrow((XCEP_t_Frame*)&XCEP_v_state.frame)
 
@@ -160,7 +185,9 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 // =========================================================
 
 #if XCEP_CONF_ENABLE_SHORT_COMMANDS
-
+	typedef XCEP_t_Exception t_Exception;
+	typedef XCEP_t_ExceptionHandler t_ExceptionHandler;
+	#define NewException(_code, _msg) XCEP_NewException(_code, _msg)
 	#define Try XCEP_Try
 	#define Catch(_code) XCEP_Catch(_code)
 	#define CatchAll XCEP_CatchAll
@@ -207,16 +234,37 @@ static int XCEP___RunIfPossible(const XCEP_t_ExceptionHandler inFunction, const 
 	return 0;
 }
 
-void XCEP___UpdateException(XCEP_t_Frame* inFrame, const int inCode, const char* inMessage, const char* inFunctionName, const char* inFile, const int inLine) {
-    inFrame->exception.code = inCode;
-    inFrame->exception.message = inMessage;
-    inFrame->exception.line = inLine;
-    inFrame->exception.file = inFile;
-    inFrame->exception.function = inFunctionName;
+void XCEP___UpdateException(
+	XCEP_t_Frame *inFrame,
+    const int inCode,
+    const char *inMessage
+#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+    ,
+    const char *inFunctionName,
+    const char *inFile,
+    const int inLine
+#endif
+) {
+	inFrame->exception.code = inCode;
+	inFrame->exception.message = inMessage;
+#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+	inFrame->exception.line = inLine;
+	inFrame->exception.file = inFile;
+	inFrame->exception.function = inFunctionName;
+#endif
 }
 
-void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inException) {
-	fprintf(stderr, inFormat, inException->code, inException->message, inException->function, inException->file, inException->line );
+void XCEP___PrintException(const char *inFormat, const XCEP_t_Exception *inException) {
+	fprintf(stderr, inFormat,
+	        inException->code,
+	        inException->message
+		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+	        ,
+	        inException->function,
+	        inException->file,
+	        inException->line
+		#endif
+	);
 }
 
 void XCEP___Thrown(const XCEP_t_Exception *inException) {
@@ -228,7 +276,16 @@ void XCEP___Thrown(const XCEP_t_Exception *inException) {
 	}
 
 	if (vCurrentFrame) {
-		XCEP___UpdateException(vCurrentFrame, inException->code, inException->message, inException->function, inException->file, inException->line);
+		XCEP___UpdateException(vCurrentFrame,
+			inException->code,
+			inException->message
+		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+			,
+			inException->function,
+			inException->file,
+			inException->line
+		#endif
+			);
 		longjmp(vCurrentFrame->env, 1);
 	}
 

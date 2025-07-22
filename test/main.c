@@ -1,12 +1,21 @@
+#include <stdio.h>
+
 #include "test_suite.h"
 #include "XCEP.h"
 
+void handlerIgnore(const XCEP_t_Exception* inException) {
+    printf("Ignoring exception: %d\n", inException->code);
+}
+
 int main() {
+
 #if XCEP_CONF_ENABLE_THREAD_SAFE
-    SetThreadUncaughtExceptionHandler(XCEP_g_UncaughtExceptionHandler);
-#endif
+    SetThreadUncaughtExceptionHandler(handlerIgnore);
     SetThreadUncaughtExceptionHandler(NULL);
-    const XCEP_t_Exception exception = { .code = 100, .message = "Test Exception", .line = 100, .file = "main.c", .function = "main"};
+#endif
+
+    const t_Exception exception = NewException(100, "Error 100 have been triggered");
     PrintException("Test Exception", &exception);
+
     return run_test_suit();
 }
