@@ -17,6 +17,8 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+// ReSharper disable CppNonInlineFunctionDefinitionInHeaderFile
+
 #ifndef XCEP_CDAD39BB4CBB62BD_H
 #define XCEP_CDAD39BB4CBB62BD_H
 
@@ -94,7 +96,7 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 	#define XCEP_SetThreadUncaughtExceptionHandler(_handler) XCEP_g_ThreadUncaughtExceptionHandler = (_handler)
 	#define XCEP___IF_THREAD(_instruction) (_instruction)
 #else
-	#define XCEP___IF_THREAD(_instruction) (NULL)
+	#define XCEP___IF_THREAD(_instruction) (0)
 #endif
 
 // =========================================================
@@ -179,8 +181,8 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 #endif // XCEP_CDAD39BB4CBB62BD_H
 
 #ifdef XCEP_IMPLEMENTATION
+#undef XCEP_IMPLEMENTATION
 
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -218,43 +220,41 @@ void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inExcep
 }
 
 void XCEP___Thrown(const XCEP_t_Exception *inException) {
-    XCEP_t_Frame* vCurrentFrame = XCEP_g_Stack;
+	XCEP_t_Frame* vCurrentFrame = XCEP_g_Stack;
 
-    // Propagate inException when thrown in catch
-    if (vCurrentFrame != NULL && vCurrentFrame->handled) {
-        vCurrentFrame->state_flags |= XCEP_FRAME_STATE_THROWN_IN_CATCH;
-    }
+	// Propagate inException when thrown in catch
+	if (vCurrentFrame != NULL && vCurrentFrame->handled) {
+		vCurrentFrame->state_flags |= XCEP_FRAME_STATE_THROWN_IN_CATCH;
+	}
 
 	if (vCurrentFrame) {
 		XCEP___UpdateException(vCurrentFrame, inException->code, inException->message, inException->function, inException->file, inException->line);
 		longjmp(vCurrentFrame->env, 1);
 	}
 
-	XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, inException))
-	||
-	XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, inException)
-	||
-	XCEP___DefaultUncaughtExceptionHandler(inException);
+	if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, inException)) &&
+	    !XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, inException)) {
+		XCEP___DefaultUncaughtExceptionHandler(inException);
+	}
 }
 
-void XCEP___EndTry(const int inHasThrown, const XCEP_t_Frame* inCurrentFrame) {
+void XCEP___EndTry(const int inHasThrown, const XCEP_t_Frame *inCurrentFrame) {
 	XCEP_g_Stack = XCEP_g_Stack->prev;
 
-    int vShouldPropagate = (inHasThrown && !inCurrentFrame->handled) ||
-                           (inCurrentFrame->state_flags & (XCEP_FRAME_STATE_RETHROW_REQUESTED | XCEP_FRAME_STATE_THROWN_IN_CATCH));
+	const int vShouldPropagate = inHasThrown && !inCurrentFrame->handled ||
+	                       inCurrentFrame->state_flags & (XCEP_FRAME_STATE_RETHROW_REQUESTED | XCEP_FRAME_STATE_THROWN_IN_CATCH);
 
-    if (vShouldPropagate) {
-        if (XCEP_g_Stack) {
-            XCEP_g_Stack->exception = inCurrentFrame->exception;
-            longjmp(XCEP_g_Stack->env, 1);
-        }
+	if (vShouldPropagate) {
+		if (XCEP_g_Stack) {
+			XCEP_g_Stack->exception = inCurrentFrame->exception;
+			longjmp(XCEP_g_Stack->env, 1);
+		}
 
-        XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, (XCEP_t_Exception*)&inCurrentFrame->exception))
-        ||
-        XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, (XCEP_t_Exception*)&inCurrentFrame->exception)
-        ||
-        XCEP___DefaultUncaughtExceptionHandler((XCEP_t_Exception*)&inCurrentFrame->exception);
-    }
+		if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &inCurrentFrame->exception)) &&
+		    !XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &inCurrentFrame->exception)) {
+			XCEP___DefaultUncaughtExceptionHandler(&inCurrentFrame->exception);
+		}
+	}
 }
 
 void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame) {
@@ -262,5 +262,4 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame) {
     inCurrentFrame->state_flags |= XCEP_FRAME_STATE_RETHROW_REQUESTED;
 }
 
-#undef XCEP_IMPLEMENTATION
 #endif
