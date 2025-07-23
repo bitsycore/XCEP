@@ -232,7 +232,6 @@ void XCEP___EndTry(const XCEP_t_Frame* inCurrentFrame);
 
 #endif // XCEP_CDAD39BB4CBB62BD_H
 
-#define XCEP_IMPLEMENTATION
 #ifdef XCEP_IMPLEMENTATION
 #undef XCEP_IMPLEMENTATION
 
@@ -301,12 +300,12 @@ void XCEP___Thrown(const XCEP_t_Exception *inException) {
 }
 
 void XCEP___UpdateException(
-    const XCEP_INT inCode,
-    const char *inMessage
+	const XCEP_INT inCode,
+	const char *inMessage
 #if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-    ,const char *inFunctionName
-    ,const char *inFile
-    ,const XCEP_INT inLine
+	,const char *inFunctionName
+	,const char *inFile
+	,const XCEP_INT inLine
 #endif
 ) {
 	XCEP_g_LastException.code = inCode;
@@ -322,8 +321,8 @@ void XCEP___EndTry(const XCEP_t_Frame *inCurrentFrame) {
 	XCEP_g_Stack = XCEP_g_Stack->prev;
 
 	const XCEP_BOOL vShouldPropagate =
-            inCurrentFrame->state_flags.thrown == XCEP_TRUE && inCurrentFrame->state_flags.have_been_handled == XCEP_FALSE
-            || (inCurrentFrame->state_flags.rethrow_requested || inCurrentFrame->state_flags.thrown_in_catch);
+			inCurrentFrame->state_flags.thrown == XCEP_TRUE && inCurrentFrame->state_flags.have_been_handled == XCEP_FALSE
+			|| (inCurrentFrame->state_flags.rethrow_requested || inCurrentFrame->state_flags.thrown_in_catch);
 
 	if (vShouldPropagate) {
 		if (XCEP_g_Stack) {
