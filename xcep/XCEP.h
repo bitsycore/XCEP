@@ -135,20 +135,10 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 // MARK: Functions Def
 // =========================================================
 
-void XCEP___UpdateException(
-	XCEP_INT inCode,
-	const char *inMessage
-#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-	,const char *inFunctionName
-	,const char *inFile
-	,XCEP_INT inLine
-#endif
-);
-
 void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inException);
 void XCEP___Thrown(const XCEP_t_Exception *inException);
-void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 void XCEP___EndTry(const XCEP_t_Frame* inCurrentFrame);
+void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 
 // =========================================================
 // MARK: Exception Print
@@ -232,12 +222,14 @@ void XCEP___EndTry(const XCEP_t_Frame* inCurrentFrame);
 
 #endif // XCEP_CDAD39BB4CBB62BD_H
 
+//#define XCEP_IMPLEMENTATION
 #ifdef XCEP_IMPLEMENTATION
 #undef XCEP_IMPLEMENTATION
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack = NULL;
 XCEP_THREAD_LOCAL XCEP_t_Exception XCEP_g_LastException = {0};
@@ -247,17 +239,21 @@ XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler = NULL;
 	XCEP_THREAD_LOCAL XCEP_t_ExceptionHandler XCEP_g_ThreadUncaughtExceptionHandler = NULL;
 #endif
 
-static inline void XCEP___DefaultUncaughtExceptionHandler(const XCEP_t_Exception* inException) {
-	XCEP___PrintException(XCEP_FormatException("Uncaught inException"), inException);
-	exit(inException->code);
-}
-
-static inline XCEP_BOOL XCEP___RunIfPossible(const XCEP_t_ExceptionHandler inFunction, const XCEP_t_Exception* inException) {
-	if (inFunction) {
-		inFunction(inException);
-		return 1;
+static void XCEP___UncaughtExceptionHandling(const XCEP_t_Exception *inException) {
+#if XCEP_CONF_ENABLE_THREAD_SAFE
+	if (XCEP_g_ThreadUncaughtExceptionHandler) {
+		XCEP_g_ThreadUncaughtExceptionHandler(inException);
+	} else {
+#endif
+		if (XCEP_g_UncaughtExceptionHandler) {
+			XCEP_g_UncaughtExceptionHandler(inException);
+		} else {
+			XCEP___PrintException(XCEP_FormatException("Uncaught inException"), inException);
+			exit(inException->code);
+		}
+#if XCEP_CONF_ENABLE_THREAD_SAFE
 	}
-	return 0;
+#endif
 }
 
 void XCEP___PrintException(const char *inFormat, const XCEP_t_Exception *inException) {
@@ -281,40 +277,11 @@ void XCEP___Thrown(const XCEP_t_Exception *inException) {
 	}
 
 	if (vCurrentFrame) {
-		XCEP___UpdateException(
-			inException->code,
-			inException->message
-		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-			,inException->function
-			,inException->file
-			,inException->line
-		#endif
-		);
+		memcpy(&XCEP_g_LastException, inException, sizeof(XCEP_t_Exception));
 		longjmp(vCurrentFrame->env, XCEP_TRUE);
 	}
 
-	if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, inException)) &&
-		!XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, inException)) {
-		XCEP___DefaultUncaughtExceptionHandler(inException);
-	}
-}
-
-void XCEP___UpdateException(
-	const XCEP_INT inCode,
-	const char *inMessage
-#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-	,const char *inFunctionName
-	,const char *inFile
-	,const XCEP_INT inLine
-#endif
-) {
-	XCEP_g_LastException.code = inCode;
-	XCEP_g_LastException.message = inMessage;
-#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-	XCEP_g_LastException.line = inLine;
-	XCEP_g_LastException.file = inFile;
-	XCEP_g_LastException.function = inFunctionName;
-#endif
+    XCEP___UncaughtExceptionHandling(inException);
 }
 
 void XCEP___EndTry(const XCEP_t_Frame *inCurrentFrame) {
@@ -328,11 +295,7 @@ void XCEP___EndTry(const XCEP_t_Frame *inCurrentFrame) {
 		if (XCEP_g_Stack) {
 			longjmp(XCEP_g_Stack->env, XCEP_TRUE);
 		}
-
-		if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &XCEP_g_LastException)) &&
-			!XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &XCEP_g_LastException)) {
-			XCEP___DefaultUncaughtExceptionHandler(&XCEP_g_LastException);
-		}
+        XCEP___UncaughtExceptionHandling(&XCEP_g_LastException);
 	}
 }
 

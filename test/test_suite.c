@@ -24,6 +24,11 @@ int g_tests_failed = 0;
     } \
     printf("\n")
 
+#define BOOL_TO_STR_0 "false"
+#define BOOL_TO_STR_1 "true"
+#define BOOL_TO_STR(x) BOOL_TO_STR_IMPL(x)
+#define BOOL_TO_STR_IMPL(x) BOOL_TO_STR_##x
+
 // =========================================================
 // MARK: Exception Codes
 // =========================================================
@@ -524,9 +529,9 @@ int run_test_suit() {
     printf("===== Running XCEP Test Suite =====\n\n");
 
     printf("-- Configuration --\n");
-    printf("    XCEP_CONF_ENABLE_THREAD_SAFE=%s\n", XCEP_CONF_ENABLE_THREAD_SAFE ? "true" : "false");
-    printf("    XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO=%s\n", XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO ? "true" : "false");
-    printf("    XCEP_CONF_ENABLE_CUSTOM_TYPES=%s\n", XCEP_CONF_ENABLE_CUSTOM_TYPES ? "true" : "false");
+    printf("    XCEP_CONF_ENABLE_THREAD_SAFE=" BOOL_TO_STR(XCEP_CONF_ENABLE_THREAD_SAFE) "\n");
+    printf("    XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO=" BOOL_TO_STR(XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO) "\n");
+    printf("    XCEP_CONF_ENABLE_CUSTOM_TYPES=" BOOL_TO_STR(XCEP_CONF_ENABLE_CUSTOM_TYPES) "\n");
 
     printf("\n");
 
