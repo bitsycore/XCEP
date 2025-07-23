@@ -96,7 +96,6 @@ typedef struct {
 typedef struct XCEP_t_Frame {
 	jmp_buf env;
     XCEP_UINT state_flags;
-	XCEP_t_Exception exception;
 	struct XCEP_t_Frame* prev;
 } XCEP_t_Frame;
 
@@ -107,6 +106,7 @@ typedef void (*XCEP_t_ExceptionHandler)(const XCEP_t_Exception*);
 // =========================================================
 
 extern XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack;
+extern XCEP_THREAD_LOCAL XCEP_t_Exception XCEP_g_LastException;
 
 // =========================================================
 // MARK: Unhandled CaughtException Handler
@@ -128,14 +128,12 @@ extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
 // =========================================================
 
 void XCEP___UpdateException(
-	XCEP_t_Frame *inFrame,
 	XCEP_INT inCode,
 	const char *inMessage
 #if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-    ,
-    const char *inFunctionName,
-    const char *inFile,
-    XCEP_INT inLine
+    ,const char *inFunctionName
+    ,const char *inFile
+    ,XCEP_INT inLine
 #endif
 );
 
@@ -185,12 +183,12 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
               XCEP_v_state.thrown = setjmp(XCEP_v_state.frame.env) ) == 0 )
 
 #define XCEP_Catch(_code) \
-	else if (!(XCEP_v_state.frame.state_flags & XCEP_FRAME_STATE_HANDLED) && XCEP_v_state.frame.exception.code == (_code) && (XCEP_v_state.frame.state_flags |= XCEP_FRAME_STATE_HANDLED)) \
+	else if (!(XCEP_v_state.frame.state_flags & XCEP_FRAME_STATE_HANDLED) && XCEP_g_LastException.code == (_code) && (XCEP_v_state.frame.state_flags |= XCEP_FRAME_STATE_HANDLED)) \
 
 #define XCEP_CatchAll \
     else if (!(XCEP_v_state.frame.state_flags & XCEP_FRAME_STATE_HANDLED) && (XCEP_v_state.frame.state_flags |= XCEP_FRAME_STATE_HANDLED)) \
 
-#define XCEP_CaughtException XCEP_g_Stack->exception
+#define XCEP_CaughtException XCEP_g_LastException
 
 #define XCEP_Finally if (1)
 
@@ -236,6 +234,7 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 #include <assert.h>
 
 XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack = NULL;
+XCEP_THREAD_LOCAL XCEP_t_Exception XCEP_g_LastException = {0};
 XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler = NULL;
 
 #if XCEP_CONF_ENABLE_THREAD_SAFE
@@ -256,22 +255,20 @@ static XCEP_BOOL XCEP___RunIfPossible(const XCEP_t_ExceptionHandler inFunction, 
 }
 
 void XCEP___UpdateException(
-	XCEP_t_Frame *inFrame,
     const XCEP_INT inCode,
     const char *inMessage
 #if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-    ,
-    const char *inFunctionName,
-    const char *inFile,
-    const XCEP_INT inLine
+    ,const char *inFunctionName
+    ,const char *inFile
+    ,const XCEP_INT inLine
 #endif
 ) {
-	inFrame->exception.code = inCode;
-	inFrame->exception.message = inMessage;
+	XCEP_g_LastException.code = inCode;
+	XCEP_g_LastException.message = inMessage;
 #if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-	inFrame->exception.line = inLine;
-	inFrame->exception.file = inFile;
-	inFrame->exception.function = inFunctionName;
+	XCEP_g_LastException.line = inLine;
+	XCEP_g_LastException.file = inFile;
+	XCEP_g_LastException.function = inFunctionName;
 #endif
 }
 
@@ -297,14 +294,13 @@ void XCEP___Thrown(const XCEP_t_Exception *inException) {
 	}
 
 	if (vCurrentFrame) {
-		XCEP___UpdateException(vCurrentFrame,
+		XCEP___UpdateException(
 			inException->code,
 			inException->message
 		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-			,
-			inException->function,
-			inException->file,
-			inException->line
+			,inException->function
+			,inException->file
+			,inException->line
 		#endif
 			);
 		longjmp(vCurrentFrame->env, 1);
@@ -324,13 +320,12 @@ void XCEP___EndTry(const XCEP_BOOL inHasThrown, const XCEP_t_Frame *inCurrentFra
 
 	if (vShouldPropagate) {
 		if (XCEP_g_Stack) {
-			XCEP_g_Stack->exception = inCurrentFrame->exception;
 			longjmp(XCEP_g_Stack->env, 1);
 		}
 
-		if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &inCurrentFrame->exception)) &&
-		    !XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &inCurrentFrame->exception)) {
-			XCEP___DefaultUncaughtExceptionHandler(&inCurrentFrame->exception);
+		if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &XCEP_g_LastException)) &&
+		    !XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &XCEP_g_LastException)) {
+			XCEP___DefaultUncaughtExceptionHandler(&XCEP_g_LastException);
 		}
 	}
 }
