@@ -23,6 +23,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define XCEP_CDAD39BB4CBB62BD_H
 
 #include <setjmp.h>
+#include <assert.h>
 
 // =========================================================
 // MARK: Configuration
@@ -37,9 +38,12 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdbool.h>
 #include <stdint.h>
-#define XCEP_CONF_CUSTOM_TYPE_INT int32_t
-#define XCEP_CONF_CUSTOM_TYPE_UINT uint32_t
+
+#define XCEP_CONF_CUSTOM_TYPE_INT uint16_t
+#define XCEP_CONF_CUSTOM_TYPE_UINT uint8_t
 #define XCEP_CONF_CUSTOM_TYPE_BOOL bool
+#define XCEP_CONF_CUSTOM_TRUE true
+#define XCEP_CONF_CUSTOM_FALSE false
 
 #endif
 
@@ -71,17 +75,15 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	typedef XCEP_CONF_CUSTOM_TYPE_BOOL XCEP_BOOL;
 	typedef XCEP_CONF_CUSTOM_TYPE_UINT XCEP_UINT;
 	typedef XCEP_CONF_CUSTOM_TYPE_INT XCEP_INT;
+	#define XCEP_TRUE XCEP_CONF_CUSTOM_TRUE
+	#define XCEP_FALSE XCEP_CONF_CUSTOM_FALSE
 #else
-	typedef int XCEP_BOOL;
+	typedef unsigned int XCEP_BOOL;
 	typedef unsigned int XCEP_UINT;
 	typedef int XCEP_INT;
+	#define XCEP_TRUE ((XCEP_BOOL)1u)
+	#define XCEP_FALSE ((XCEP_BOOL)0u)
 #endif
-
-enum XCEP_t_FrameState {
-    XCEP_FRAME_STATE_RETHROW_REQUESTED = 1 << 0,
-    XCEP_FRAME_STATE_THROWN_IN_CATCH = 1 << 1,
-	XCEP_FRAME_STATE_HANDLED = 1 << 2,
-};
 
 typedef struct {
 	XCEP_INT code;
@@ -95,7 +97,13 @@ typedef struct {
 
 typedef struct XCEP_t_Frame {
 	jmp_buf env;
-    XCEP_UINT state_flags;
+	struct {
+		XCEP_BOOL run_once : 1;
+		XCEP_BOOL thrown : 1;
+		XCEP_BOOL rethrow_requested : 1;
+		XCEP_BOOL thrown_in_catch: 1;
+		XCEP_BOOL have_been_handled: 1;
+	} state_flags;
 	struct XCEP_t_Frame* prev;
 } XCEP_t_Frame;
 
@@ -109,7 +117,7 @@ extern XCEP_THREAD_LOCAL XCEP_t_Frame* XCEP_g_Stack;
 extern XCEP_THREAD_LOCAL XCEP_t_Exception XCEP_g_LastException;
 
 // =========================================================
-// MARK: Unhandled CaughtException Handler
+// MARK: UncaughtExceptionHandler
 // =========================================================
 
 extern XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler;
@@ -131,16 +139,16 @@ void XCEP___UpdateException(
 	XCEP_INT inCode,
 	const char *inMessage
 #if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-    ,const char *inFunctionName
-    ,const char *inFile
-    ,XCEP_INT inLine
+	,const char *inFunctionName
+	,const char *inFile
+	,XCEP_INT inLine
 #endif
 );
 
 void XCEP___PrintException(const char* inFormat, const XCEP_t_Exception* inException);
 void XCEP___Thrown(const XCEP_t_Exception *inException);
-void XCEP___EndTry(XCEP_BOOL inHasThrown, const XCEP_t_Frame* inCurrentFrame);
 void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
+void XCEP___EndTry(const XCEP_t_Frame* inCurrentFrame);
 
 // =========================================================
 // MARK: Exception Print
@@ -165,35 +173,33 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 #endif
 
 #define XCEP__DECLARE_STATE_STRUCT \
-    struct { \
-        XCEP_t_Frame frame; \
-        XCEP_BOOL thrown : 1; \
-        XCEP_BOOL run_once : 1; \
-    } XCEP_v_state
+	struct { \
+		XCEP_t_Frame frame; \
+	} XCEP_v_state
 
 #define XCEP_Try \
-    for ( \
-        XCEP__DECLARE_STATE_STRUCT = { .run_once = 1 }; /*Init*/ \
-        XCEP_v_state.run_once; /*Cond*/ \
-        XCEP_v_state.run_once = 0, XCEP___EndTry(XCEP_v_state.thrown, (XCEP_t_Frame*)&XCEP_v_state.frame) /*Cleanup*/ \
-    ) \
-    do { \
-        if ( (XCEP_v_state.frame.prev = XCEP_g_Stack, \
-              XCEP_g_Stack = (XCEP_t_Frame*)&XCEP_v_state.frame, \
-              XCEP_v_state.thrown = setjmp(XCEP_v_state.frame.env) ) == 0 )
+	for ( \
+		XCEP__DECLARE_STATE_STRUCT = { 0 }; /*Init*/ \
+		XCEP_v_state.frame.state_flags.run_once == XCEP_FALSE; /*Cond*/ \
+		XCEP_v_state.frame.state_flags.run_once = XCEP_TRUE, XCEP___EndTry((XCEP_t_Frame*)&XCEP_v_state.frame) /*Cleanup*/ \
+	) \
+	do { \
+		if ( (XCEP_v_state.frame.prev = XCEP_g_Stack, \
+			  XCEP_g_Stack = (XCEP_t_Frame*)&XCEP_v_state.frame, \
+			  XCEP_v_state.frame.state_flags.thrown = setjmp(XCEP_v_state.frame.env) ) == XCEP_FALSE )
 
 #define XCEP_Catch(_code) \
-	else if (!(XCEP_v_state.frame.state_flags & XCEP_FRAME_STATE_HANDLED) && XCEP_g_LastException.code == (_code) && (XCEP_v_state.frame.state_flags |= XCEP_FRAME_STATE_HANDLED)) \
+	else if (XCEP_v_state.frame.state_flags.have_been_handled == XCEP_FALSE && XCEP_g_LastException.code == (_code) && (XCEP_v_state.frame.state_flags.have_been_handled = XCEP_TRUE)) \
 
 #define XCEP_CatchAll \
-    else if (!(XCEP_v_state.frame.state_flags & XCEP_FRAME_STATE_HANDLED) && (XCEP_v_state.frame.state_flags |= XCEP_FRAME_STATE_HANDLED)) \
+	else if (XCEP_v_state.frame.state_flags.have_been_handled == XCEP_FALSE && (XCEP_v_state.frame.state_flags.have_been_handled = XCEP_TRUE)) \
 
 #define XCEP_CaughtException XCEP_g_LastException
 
 #define XCEP_Finally if (1)
 
 #define XCEP_EndTry \
-    } while (0)
+	} while (0)
 
 #define XCEP_Throw(_code, _msg) XCEP___Thrown(&XCEP_NewException(_code, _msg))
 
@@ -215,7 +221,7 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 	#define EndTry XCEP_EndTry
 	#define Throw(_code, _msg) XCEP_Throw(_code, _msg)
 	#define Rethrow XCEP_Rethrow
-    #define PrintException(_text, _exception) XCEP_PrintException(_text, _exception)
+	#define PrintException(_text, _exception) XCEP_PrintException(_text, _exception)
 	#define SetUncaughtExceptionHandler(_handler) XCEP_SetUncaughtExceptionHandler(_handler)
 
 	#if XCEP_CONF_ENABLE_THREAD_SAFE
@@ -226,6 +232,7 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 
 #endif // XCEP_CDAD39BB4CBB62BD_H
 
+#define XCEP_IMPLEMENTATION
 #ifdef XCEP_IMPLEMENTATION
 #undef XCEP_IMPLEMENTATION
 
@@ -241,17 +248,56 @@ XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler = NULL;
 	XCEP_THREAD_LOCAL XCEP_t_ExceptionHandler XCEP_g_ThreadUncaughtExceptionHandler = NULL;
 #endif
 
-static XCEP_BOOL XCEP___DefaultUncaughtExceptionHandler(const XCEP_t_Exception* inException) {
+static inline XCEP_BOOL XCEP___DefaultUncaughtExceptionHandler(const XCEP_t_Exception* inException) {
 	XCEP___PrintException(XCEP_FormatException("Uncaught inException"), inException);
 	exit(inException->code);
 }
 
-static XCEP_BOOL XCEP___RunIfPossible(const XCEP_t_ExceptionHandler inFunction, const XCEP_t_Exception* inException) {
+static inline XCEP_BOOL XCEP___RunIfPossible(const XCEP_t_ExceptionHandler inFunction, const XCEP_t_Exception* inException) {
 	if (inFunction) {
 		inFunction(inException);
 		return 1;
 	}
 	return 0;
+}
+
+void XCEP___PrintException(const char *inFormat, const XCEP_t_Exception *inException) {
+	fprintf(stderr, inFormat,
+			inException->code,
+			inException->message
+		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+			,inException->function
+			,inException->file
+			,inException->line
+		#endif
+	);
+}
+
+void XCEP___Thrown(const XCEP_t_Exception *inException) {
+	XCEP_t_Frame* vCurrentFrame = XCEP_g_Stack;
+
+	// Propagate inException when thrown in catch
+	if (vCurrentFrame != NULL && vCurrentFrame->state_flags.have_been_handled) {
+		vCurrentFrame->state_flags.thrown_in_catch = 1;
+	}
+
+	if (vCurrentFrame) {
+		XCEP___UpdateException(
+			inException->code,
+			inException->message
+		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
+			,inException->function
+			,inException->file
+			,inException->line
+		#endif
+		);
+		longjmp(vCurrentFrame->env, XCEP_TRUE);
+	}
+
+	if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, inException)) &&
+		!XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, inException)) {
+		XCEP___DefaultUncaughtExceptionHandler(inException);
+	}
 }
 
 void XCEP___UpdateException(
@@ -272,67 +318,28 @@ void XCEP___UpdateException(
 #endif
 }
 
-void XCEP___PrintException(const char *inFormat, const XCEP_t_Exception *inException) {
-	fprintf(stderr, inFormat,
-	        inException->code,
-	        inException->message
-		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-	        ,
-	        inException->function,
-	        inException->file,
-	        inException->line
-		#endif
-	);
-}
-
-void XCEP___Thrown(const XCEP_t_Exception *inException) {
-	XCEP_t_Frame* vCurrentFrame = XCEP_g_Stack;
-
-	// Propagate inException when thrown in catch
-	if (vCurrentFrame != NULL && vCurrentFrame->state_flags & XCEP_FRAME_STATE_HANDLED) {
-		vCurrentFrame->state_flags |= XCEP_FRAME_STATE_THROWN_IN_CATCH;
-	}
-
-	if (vCurrentFrame) {
-		XCEP___UpdateException(
-			inException->code,
-			inException->message
-		#if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-			,inException->function
-			,inException->file
-			,inException->line
-		#endif
-			);
-		longjmp(vCurrentFrame->env, 1);
-	}
-
-	if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, inException)) &&
-	    !XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, inException)) {
-		XCEP___DefaultUncaughtExceptionHandler(inException);
-	}
-}
-
-void XCEP___EndTry(const XCEP_BOOL inHasThrown, const XCEP_t_Frame *inCurrentFrame) {
+void XCEP___EndTry(const XCEP_t_Frame *inCurrentFrame) {
 	XCEP_g_Stack = XCEP_g_Stack->prev;
 
-	const XCEP_BOOL vShouldPropagate = inHasThrown && !(inCurrentFrame->state_flags & XCEP_FRAME_STATE_HANDLED) ||
-	                       inCurrentFrame->state_flags & (XCEP_FRAME_STATE_RETHROW_REQUESTED | XCEP_FRAME_STATE_THROWN_IN_CATCH);
+	const XCEP_BOOL vShouldPropagate =
+            inCurrentFrame->state_flags.thrown == XCEP_TRUE && inCurrentFrame->state_flags.have_been_handled == XCEP_FALSE
+            || (inCurrentFrame->state_flags.rethrow_requested || inCurrentFrame->state_flags.thrown_in_catch);
 
 	if (vShouldPropagate) {
 		if (XCEP_g_Stack) {
-			longjmp(XCEP_g_Stack->env, 1);
+			longjmp(XCEP_g_Stack->env, XCEP_TRUE);
 		}
 
 		if (!XCEP___IF_THREAD(XCEP___RunIfPossible(XCEP_g_ThreadUncaughtExceptionHandler, &XCEP_g_LastException)) &&
-		    !XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &XCEP_g_LastException)) {
+			!XCEP___RunIfPossible(XCEP_g_UncaughtExceptionHandler, &XCEP_g_LastException)) {
 			XCEP___DefaultUncaughtExceptionHandler(&XCEP_g_LastException);
 		}
 	}
 }
 
 void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame) {
-    assert(inCurrentFrame->state_flags & XCEP_FRAME_STATE_HANDLED && "Rethrow can only be used inside a Catch or CatchAll block.");
-    inCurrentFrame->state_flags |= XCEP_FRAME_STATE_RETHROW_REQUESTED;
+	assert(inCurrentFrame->state_flags.have_been_handled == XCEP_TRUE && "Rethrow can only be used inside a Catch or CatchAll block.");
+	inCurrentFrame->state_flags.rethrow_requested = XCEP_TRUE;
 }
 
 #endif
