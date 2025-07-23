@@ -523,6 +523,13 @@ int test_thread_safety_scalable() {
 int run_test_suit() {
     printf("===== Running XCEP Test Suite =====\n\n");
 
+    printf("-- Configuration --\n");
+    printf("    XCEP_CONF_ENABLE_THREAD_SAFE=%s\n", XCEP_CONF_ENABLE_THREAD_SAFE ? "true" : "false");
+    printf("    XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO=%s\n", XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO ? "true" : "false");
+    printf("    XCEP_CONF_ENABLE_CUSTOM_TYPES=%s\n", XCEP_CONF_ENABLE_CUSTOM_TYPES ? "true" : "false");
+
+    printf("\n");
+
     RUN_TEST(test_no_throw);
     RUN_TEST(test_simple_catch);
     RUN_TEST(test_catch_all);
@@ -536,7 +543,12 @@ int run_test_suit() {
     RUN_TEST(test_multiple_catch_blocks);
     RUN_TEST(test_try_finally_only);
     RUN_TEST(test_uncaught_exception);
+
+#if XCEP_CONF_ENABLE_THREAD_SAFE
     RUN_TEST(test_thread_safety_scalable);
+#else
+    printf("   WARNING: Thread safety tests are disabled.\n");
+#endif
 
     printf("===== Test Suite Finished =====\n");
     printf("Result: %d passed, %d failed.\n", g_tests_passed, g_tests_failed);
