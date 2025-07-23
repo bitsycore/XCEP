@@ -14,7 +14,7 @@ int g_tests_passed = 0;
 int g_tests_failed = 0;
 
 #define RUN_TEST(test_func) \
-    printf("-- Running %s --\n", #test_func); \
+    printf("-- Running " #test_func " --\n"); \
     if (test_func()) { \
         g_tests_passed++; \
         printf("   ...PASSED\n"); \
