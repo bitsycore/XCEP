@@ -247,7 +247,7 @@ XCEP_t_ExceptionHandler XCEP_g_UncaughtExceptionHandler = NULL;
 	XCEP_THREAD_LOCAL XCEP_t_ExceptionHandler XCEP_g_ThreadUncaughtExceptionHandler = NULL;
 #endif
 
-static inline XCEP_BOOL XCEP___DefaultUncaughtExceptionHandler(const XCEP_t_Exception* inException) {
+static inline void XCEP___DefaultUncaughtExceptionHandler(const XCEP_t_Exception* inException) {
 	XCEP___PrintException(XCEP_FormatException("Uncaught inException"), inException);
 	exit(inException->code);
 }
