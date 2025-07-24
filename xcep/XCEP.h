@@ -23,7 +23,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define XCEP_CDAD39BB4CBB62BD_H
 
 #include <setjmp.h>
-#include <assert.h>
+#include <stdbool.h>
 
 // =========================================================
 // MARK: Configuration
@@ -78,11 +78,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#define XCEP_TRUE XCEP_CONF_CUSTOM_TRUE
 	#define XCEP_FALSE XCEP_CONF_CUSTOM_FALSE
 #else
-	typedef unsigned int XCEP_BOOL;
+	typedef bool XCEP_BOOL;
 	typedef unsigned int XCEP_UINT;
 	typedef int XCEP_INT;
-	#define XCEP_TRUE ((XCEP_BOOL)1u)
-	#define XCEP_FALSE ((XCEP_BOOL)0u)
+	#define XCEP_TRUE ((XCEP_BOOL)true)
+	#define XCEP_FALSE ((XCEP_BOOL)false)
 #endif
 
 typedef struct {
@@ -222,7 +222,6 @@ void XCEP___Rethrow(XCEP_t_Frame* inCurrentFrame);
 
 #endif // XCEP_CDAD39BB4CBB62BD_H
 
-//#define XCEP_IMPLEMENTATION
 #ifdef XCEP_IMPLEMENTATION
 #undef XCEP_IMPLEMENTATION
 

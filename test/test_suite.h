@@ -1,6 +1,0 @@
-#ifndef XCEPPROJECT_TEST_SUITE_H
-#define XCEPPROJECT_TEST_SUITE_H
-
-int run_test_suit();
-
-#endif //XCEPPROJECT_TEST_SUITE_H

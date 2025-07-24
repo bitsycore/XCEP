@@ -108,10 +108,10 @@ EndTry;
 
 ```c
 // Global uncaught exception handler
-SetUncaughtExceptionHandler(my_handler);
+SetUncaughtExceptionHandler(XCEPTEST_handler);
 
 // Thread-specific uncaught exception handler (if thread-safe mode enabled)
-SetThreadUncaughtExceptionHandler(my_thread_handler);
+SetThreadUncaughtExceptionHandler(XCEPTEST_thread_handler);
 ```
 
 
@@ -156,7 +156,7 @@ When `XCEP_CONF_ENABLE_SHORT_COMMANDS` is disabled, use prefixed versions:
 ### Custom Uncaught Exception Handler
 
 ```c
-void my_exception_handler(const XCEP_t_Exception* ex) {
+void XCEPTEST_exception_handler(const XCEP_t_Exception* ex) {
     fprintf(stderr, "FATAL: Unhandled exception %d: %s\n", 
             ex->code, ex->message);
     fprintf(stderr, "  at %s (%s:%d)\n", 
@@ -165,7 +165,7 @@ void my_exception_handler(const XCEP_t_Exception* ex) {
 }
 
 int main() {
-    SetUncaughtExceptionHandler(my_exception_handler);
+    SetUncaughtExceptionHandler(XCEPTEST_exception_handler);
     
     // This will trigger the custom handler
     Throw(1, "Unhandled exception");

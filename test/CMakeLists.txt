@@ -1,6 +1,10 @@
-add_executable(test test_suite.c
+add_executable(
+        test
         main.c
-        test_suite.h
-        cross_thread.c
-        cross_thread.h)
+        XCEPTEST_test.c
+        XCEPTEST_test.h
+        XCEPTEST_thread.c
+        XCEPTEST_thread.h
+)
+
 target_link_libraries(test PRIVATE xcep)

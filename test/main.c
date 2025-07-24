@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "test_suite.h"
+#include "XCEPTEST_test.h"
 #include "XCEP.h"
 
 void handlerIgnore(const XCEP_t_Exception* inException) {
@@ -8,14 +8,15 @@ void handlerIgnore(const XCEP_t_Exception* inException) {
 }
 
 int main() {
+    const int result = XCEPTEST_run_tests();
 
 #if XCEP_CONF_ENABLE_THREAD_SAFE
     SetThreadUncaughtExceptionHandler(handlerIgnore);
     SetThreadUncaughtExceptionHandler(NULL);
 #endif
 
-    const t_Exception exception = NewException(100, "Error 100 have been triggered");
-    PrintException("Test Exception", &exception);
+    const t_Exception exception = NewException(100, "Test Error 100 have been triggered");
+    PrintException("Test Exception print", &exception);
 
-    return run_test_suit();
+    return result;
 }

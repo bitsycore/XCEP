@@ -1,3 +1,5 @@
+#include "XCEPTEST_test.h"
+
 #define XCEP_IMPLEMENTATION
 #include <XCEP.h>
 
@@ -8,42 +10,42 @@
 // MARK: Unit Test Tools
 // =========================================================
 
-#include "cross_thread.h"
+#include "XCEPTEST_thread.h"
 
-int g_tests_passed = 0;
-int g_tests_failed = 0;
+int XCEPTEST_g_tests_passed = 0;
+int XCEPTEST_g_tests_failed = 0;
 
-#define RUN_TEST(test_func) \
-    printf("-- Running " #test_func " --\n"); \
+#define XCEPTEST_RUN_TEST(test_func) \
+    printf("# Running " #test_func " #\n"); \
     if (test_func()) { \
-        g_tests_passed++; \
+        XCEPTEST_g_tests_passed++; \
         printf("   ...PASSED\n"); \
     } else { \
-        g_tests_failed++; \
+        XCEPTEST_g_tests_failed++; \
         printf("   ...FAILED\n"); \
     } \
     printf("\n")
 
-#define BOOL_TO_STR_0 "false"
-#define BOOL_TO_STR_1 "true"
-#define BOOL_TO_STR(x) BOOL_TO_STR_IMPL(x)
-#define BOOL_TO_STR_IMPL(x) BOOL_TO_STR_##x
+#define XCEPTEST_BOOL2STR_0 "false"
+#define XCEPTEST_BOOL2STR_1 "true"
+#define XCEPTEST_BOOL2STR_IMPL(x) XCEPTEST_BOOL2STR_##x
+#define XCEPTEST_BOOL2STR(x) XCEPTEST_BOOL2STR_IMPL(x)
 
 // =========================================================
 // MARK: Exception Codes
 // =========================================================
 
-enum MyExceptionCodes {
-    ERR_GENERIC_FAILURE = 100,
-    ERR_FILE_NOT_FOUND = 101,
-    ERR_NETWORK_TIMEOUT = 102,
-    ERR_RETHROWN = 103,
-    ERR_THROWN_FROM_CATCH = 104,
-    ERR_PROPAGATED = 105,
-    ERR_DEEP_RETHROW = 106,
-    ERR_CLEANUP = 107,
-    ERR_VOLATILE_TEST = 108,
-    ERR_THREAD_BASE = 300
+enum XCEPTEST_ExceptionCodes {
+    XCEPTEST_ERR_GENERIC_FAILURE = 100,
+    XCEPTEST_ERR_FILE_NOT_FOUND = 101,
+    XCEPTEST_ERR_NETWORK_TIMEOUT = 102,
+    XCEPTEST_ERR_RETHROWN = 103,
+    XCEPTEST_ERR_THROWN_FROM_CATCH = 104,
+    XCEPTEST_ERR_PROPAGATED = 105,
+    XCEPTEST_ERR_DEEP_RETHROW = 106,
+    XCEPTEST_ERR_CLEANUP = 107,
+    XCEPTEST_ERR_VOLATILE_TEST = 108,
+    XCEPTEST_ERR_THREAD_BASE = 300
 };
 
 // =======================================================
@@ -78,14 +80,14 @@ int test_simple_catch() {
 
     Try {
         printf("   Inside Try block, about to throw.\n");
-        Throw(ERR_FILE_NOT_FOUND, "file.txt not found");
+        Throw(XCEPTEST_ERR_FILE_NOT_FOUND, "file.txt not found");
         status = -1;
     }
-    Catch(ERR_NETWORK_TIMEOUT) {
+    Catch(XCEPTEST_ERR_NETWORK_TIMEOUT) {
         printf("   This Catch(NETWORK) block should NOT execute.\n");
         status = -1;
     }
-    Catch(ERR_FILE_NOT_FOUND) {
+    Catch(XCEPTEST_ERR_FILE_NOT_FOUND) {
         printf("   Correctly caught specific exception: %d (%s)\n", CaughtException.code, CaughtException.message);
         status = 1;
     }
@@ -107,10 +109,10 @@ int test_catch_all() {
 
     Try {
         printf("   Inside Try block, about to throw.\n");
-        Throw(ERR_GENERIC_FAILURE, "a generic failure occurred");
+        Throw(XCEPTEST_ERR_GENERIC_FAILURE, "a generic failure occurred");
         status = -1;
     }
-    Catch(ERR_FILE_NOT_FOUND) {
+    Catch(XCEPTEST_ERR_FILE_NOT_FOUND) {
         printf("   This Catch(FILE) block should NOT execute.\n");
         status = -1;
     } CatchAll {
@@ -141,7 +143,7 @@ int test_nested_handled_exception() {
         Try {
             printf("   Inner Try block started, about to throw.\n");
             inner_status = 1;
-            Throw(ERR_GENERIC_FAILURE, "inner problem");
+            Throw(XCEPTEST_ERR_GENERIC_FAILURE, "inner problem");
             inner_status = -1;
         }
         CatchAll {
@@ -174,9 +176,9 @@ int test_rethrow() {
         printf("   Outer Try started.\n");
         Try {
             printf("   Inner Try started, about to throw.\n");
-            Throw(ERR_RETHROWN, "to be rethrown");
+            Throw(XCEPTEST_ERR_RETHROWN, "to be rethrown");
         }
-        Catch(ERR_RETHROWN) {
+        Catch(XCEPTEST_ERR_RETHROWN) {
             printf("   Inner Catch executed, about to rethrow...\n");
             inner_catch_fired = 1;
             Rethrow;
@@ -185,7 +187,7 @@ int test_rethrow() {
         EndTry;
         printf("   This line in Outer Try should NOT be printed.\n");
     }
-    Catch(ERR_RETHROWN) {
+    Catch(XCEPTEST_ERR_RETHROWN) {
         printf("   Outer Catch correctly caught the re-thrown exception.\n");
         printf("   CaughtException details: %d (%s)\n", CaughtException.code, CaughtException.message);
         outer_catch_fired = 1;
@@ -207,16 +209,16 @@ int test_throw_from_catch() {
         printf("   Outer Try started.\n");
         Try {
             printf("   Inner Try started, about to throw original exception.\n");
-            Throw(ERR_GENERIC_FAILURE, "original problem");
+            Throw(XCEPTEST_ERR_GENERIC_FAILURE, "original problem");
         }
-        Catch(ERR_GENERIC_FAILURE) {
+        Catch(XCEPTEST_ERR_GENERIC_FAILURE) {
             printf("   Inner Catch executed, about to throw a NEW exception.\n");
             inner_catch_fired = 1;
-            Throw(ERR_THROWN_FROM_CATCH, "new problem from catch");
+            Throw(XCEPTEST_ERR_THROWN_FROM_CATCH, "new problem from catch");
         }
         EndTry;
     }
-    Catch(ERR_THROWN_FROM_CATCH) {
+    Catch(XCEPTEST_ERR_THROWN_FROM_CATCH) {
         printf("   Outer Catch correctly caught the NEW exception.\n");
         printf("   CaughtException details: %d (%s)\n", CaughtException.code, CaughtException.message);
         outer_catch_fired = 1;
@@ -241,9 +243,9 @@ int test_nested_uncaught_propagation() {
         printf("   Outer Try started.\n");
         Try {
             printf("   Inner Try started, will throw unhandled exception.\n");
-            Throw(ERR_PROPAGATED, "propagate me");
+            Throw(XCEPTEST_ERR_PROPAGATED, "propagate me");
         }
-        Catch(ERR_GENERIC_FAILURE) {
+        Catch(XCEPTEST_ERR_GENERIC_FAILURE) {
             printf("   Inner Catch should NOT execute.\n");
             status = -1;
         }
@@ -251,7 +253,7 @@ int test_nested_uncaught_propagation() {
         printf("   This line in Outer Try should NOT be printed.\n");
         status = -1;
         }
-    Catch(ERR_PROPAGATED) {
+    Catch(XCEPTEST_ERR_PROPAGATED) {
         printf("   Outer Catch correctly caught the propagated exception.\n");
         status = 1;
     }
@@ -271,7 +273,7 @@ int test_nested_rethrow() {
         printf("   Level 1 Try.\n");
         Try { // Level 2
             printf("   Level 2 Try, will throw.\n");
-            Throw(ERR_DEEP_RETHROW, "deep problem");
+            Throw(XCEPTEST_ERR_DEEP_RETHROW, "deep problem");
         }
         CatchAll {
             printf("   Level 2 Catch, will rethrow.\n");
@@ -281,7 +283,7 @@ int test_nested_rethrow() {
     }
     CatchAll {
         printf("   Level 1 Catch, caught rethrown exception: %d.\n", CaughtException.code);
-        if (CaughtException.code == ERR_DEEP_RETHROW) {
+        if (CaughtException.code == XCEPTEST_ERR_DEEP_RETHROW) {
             status = 1;
         }
     }
@@ -301,7 +303,7 @@ int test_resource_cleanup_with_finally() {
         printf("   Acquiring resource...\n");
         resource_is_acquired = 1;
         printf("   Resource acquired, about to throw.\n");
-        Throw(ERR_CLEANUP, "something went wrong");
+        Throw(XCEPTEST_ERR_CLEANUP, "something went wrong");
     }
     CatchAll {
         printf("   Caught exception, resource state: %s.\n", resource_is_acquired ? "Acquired" : "Released");   // We expect it to still be acquired here.
@@ -332,7 +334,7 @@ int test_volatile_variable_correctness() {
     Try {
          v_var = 1;
          non_v_var = 1;
-         Throw(ERR_VOLATILE_TEST, "testing volatile");
+         Throw(XCEPTEST_ERR_VOLATILE_TEST, "testing volatile");
     }
     CatchAll {
         printf("   After longjmp: volatile var is %d, non-volatile var is %d.\n", v_var, non_v_var);
@@ -358,16 +360,16 @@ int test_multiple_catch_blocks() {
     volatile int status = 0;
 
     Try {
-        Throw(ERR_NETWORK_TIMEOUT, "a network error");
+        Throw(XCEPTEST_ERR_NETWORK_TIMEOUT, "a network error");
     }
-    Catch(ERR_FILE_NOT_FOUND) {
+    Catch(XCEPTEST_ERR_FILE_NOT_FOUND) {
         status = -1;
     }
-    Catch(ERR_NETWORK_TIMEOUT) {
+    Catch(XCEPTEST_ERR_NETWORK_TIMEOUT) {
         printf("   Correctly caught NETWORK_TIMEOUT in a list of catches.\n");
         status = 1;
     }
-    Catch(ERR_GENERIC_FAILURE) {
+    Catch(XCEPTEST_ERR_GENERIC_FAILURE) {
         status = -1;
     }
     EndTry;
@@ -384,7 +386,7 @@ void function_with_try_finally() {
 
     Try {
         printf("   Inside Try/Finally, about to throw.\n");
-        Throw(ERR_PROPAGATED, "test finally propagation");
+        Throw(XCEPTEST_ERR_PROPAGATED, "test finally propagation");
     }
     Finally {
         printf("   Finally block ran, proving cleanup occurred.\n");
@@ -403,7 +405,7 @@ int test_try_finally_only() {
     Try {
         function_with_try_finally();
     }
-    Catch(ERR_PROPAGATED) {
+    Catch(XCEPTEST_ERR_PROPAGATED) {
         printf("   Main test function caught exception propagated through a Finally.\n");
         status = 1;
     }
@@ -416,34 +418,34 @@ int test_try_finally_only() {
 // MARK: Test case 13: Uncaught exception handling
 // =======================================================
 
-volatile int g_uncaught_handler_fired_flag = 0;
+volatile int XCEPTEST_g_UncaughtHandlerFiredFlag = 0;
 
-void my_uncaught_handler(const XCEP_t_Exception *ex) {
+void XCEPTEST_uncaught_handler(const XCEP_t_Exception *ex) {
     printf("   Custom uncaught handler fired as expected for exception_result_code %d.\n", ex->code);
-    if (ex->code == ERR_GENERIC_FAILURE) {
-        g_uncaught_handler_fired_flag = 1;
+    if (ex->code == XCEPTEST_ERR_GENERIC_FAILURE) {
+        XCEPTEST_g_UncaughtHandlerFiredFlag = 1;
     }
 }
 
 void function_that_throws_nakedly() {
     printf("   About to throw from a function without a Try block...\n");
-    Throw(ERR_GENERIC_FAILURE, "this should be caught by the global handler");
+    Throw(XCEPTEST_ERR_GENERIC_FAILURE, "this should be caught by the global handler");
 }
 
 int test_uncaught_exception() {
-    g_uncaught_handler_fired_flag = 0;
+    XCEPTEST_g_UncaughtHandlerFiredFlag = 0;
     // Get the original handler to restore it later
-    XCEP_t_ExceptionHandler original_handler = XCEP_g_UncaughtExceptionHandler;
+    const XCEP_t_ExceptionHandler original_handler = XCEP_g_UncaughtExceptionHandler;
 
     printf("   Setting custom uncaught exception handler.\n");
-    SetUncaughtExceptionHandler(my_uncaught_handler);
+    SetUncaughtExceptionHandler(XCEPTEST_uncaught_handler);
 
     function_that_throws_nakedly();
 
     printf("   Restoring original uncaught exception handler.\n");
     SetUncaughtExceptionHandler(original_handler);
 
-    return g_uncaught_handler_fired_flag == 1;
+    return XCEPTEST_g_UncaughtHandlerFiredFlag == 1;
 }
 
 // =======================================================
@@ -457,14 +459,14 @@ typedef struct {
     int exception_result_code;
     char message[128];
     volatile int success_flag;
-} thread_data_t;
+} XCEPTEST_t_ThreadData;
 
-my_thread_proc_t thread_worker(void *arg) {
-    thread_data_t *data = (thread_data_t *) arg;
+void* thread_worker(void *arg) {
+    XCEPTEST_t_ThreadData *data = arg;
     data->success_flag = 0;
 
     Try {
-        my_sleep(10 + (data->thread_id % 10));
+        XCEPTEST_sleep(10 + (data->thread_id % 10));
         Throw(data->exception_result_code, data->message);
     }
     CatchAll {
@@ -477,9 +479,6 @@ my_thread_proc_t thread_worker(void *arg) {
             data->success_flag = 0;
         }
     }
-    Finally {
-
-    }
     EndTry;
 
     return NULL;
@@ -487,8 +486,8 @@ my_thread_proc_t thread_worker(void *arg) {
 
 int test_thread_safety_scalable() {
     const int num_threads = NUM_THREADS_TO_TEST;
-    my_thread_t *threads = malloc(sizeof(my_thread_t) * num_threads);
-    thread_data_t *all_thread_data = malloc(sizeof(thread_data_t) * num_threads);
+    XCEPTEST_t_Thread* threads = malloc(sizeof(XCEPTEST_t_Thread) * num_threads);
+    XCEPTEST_t_ThreadData* all_thread_data = malloc(sizeof(XCEPTEST_t_ThreadData) * num_threads);
     if (!threads || !all_thread_data) {
         fprintf(stderr, "   Failed to allocate memory for thread management.\n");
         free(threads);
@@ -497,12 +496,12 @@ int test_thread_safety_scalable() {
     }
     printf("   Initializing and launching threads...\n");
     for (int i = 0; i < num_threads; ++i) {
-        thread_data_t *data = &all_thread_data[i];
+        XCEPTEST_t_ThreadData *data = &all_thread_data[i];
         data->thread_id = i + 1;
-        data->exception_result_code = ERR_THREAD_BASE + i;
+        data->exception_result_code = XCEPTEST_ERR_THREAD_BASE + i;
         data->success_flag = 0;
         snprintf(data->message, sizeof(data->message), "Unique error from thread %d", data->thread_id);
-        if (my_thread_create(&threads[i], (my_thread_proc_t) thread_worker, data) != 0) {
+        if (XCEPTEST_ThreadCreate(&threads[i], thread_worker, data) != 0) {
             fprintf(stderr, "   Failed to create thread %d.\n", data->thread_id);
             free(threads);
             free(all_thread_data);
@@ -510,7 +509,7 @@ int test_thread_safety_scalable() {
         }
     }
     printf("   All threads launched (%d). Waiting for them to complete...\n", num_threads);
-    for (int i = 0; i < num_threads; ++i) { my_thread_join(threads[i]); }
+    for (int i = 0; i < num_threads; ++i) { XCEPTEST_ThreadJoin(threads[i]); }
     printf("   All threads finished. Verifying results...\n");
     int all_succeeded = 1;
     for (int i = 0; i < num_threads; ++i) {
@@ -525,38 +524,41 @@ int test_thread_safety_scalable() {
 }
 
 
-int run_test_suit() {
-    printf("===== Running XCEP Test Suite =====\n\n");
+int XCEPTEST_run_tests() {
 
-    printf("-- Configuration --\n");
-    printf("    XCEP_CONF_ENABLE_THREAD_SAFE=" BOOL_TO_STR(XCEP_CONF_ENABLE_THREAD_SAFE) "\n");
-    printf("    XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO=" BOOL_TO_STR(XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO) "\n");
-    printf("    XCEP_CONF_ENABLE_CUSTOM_TYPES=" BOOL_TO_STR(XCEP_CONF_ENABLE_CUSTOM_TYPES) "\n");
+    printf("===== XCEP Test Suite =====\n\n");
 
-    printf("\n");
+    printf("    XCEP_CONF_ENABLE_THREAD_SAFE=" XCEPTEST_BOOL2STR(XCEP_CONF_ENABLE_THREAD_SAFE) "\n");
+    printf("    XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO=" XCEPTEST_BOOL2STR(XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO) "\n");
+    printf("    XCEP_CONF_ENABLE_CUSTOM_TYPES=" XCEPTEST_BOOL2STR(XCEP_CONF_ENABLE_CUSTOM_TYPES) "\n");
 
-    RUN_TEST(test_no_throw);
-    RUN_TEST(test_simple_catch);
-    RUN_TEST(test_catch_all);
-    RUN_TEST(test_nested_handled_exception);
-    RUN_TEST(test_rethrow);
-    RUN_TEST(test_throw_from_catch);
-    RUN_TEST(test_nested_uncaught_propagation);
-    RUN_TEST(test_nested_rethrow);
-    RUN_TEST(test_resource_cleanup_with_finally);
-    RUN_TEST(test_volatile_variable_correctness);
-    RUN_TEST(test_multiple_catch_blocks);
-    RUN_TEST(test_try_finally_only);
-    RUN_TEST(test_uncaught_exception);
+    puts("");
+
+    printf("====== Running Test =======\n\n");
+
+    XCEPTEST_RUN_TEST(test_no_throw);
+    XCEPTEST_RUN_TEST(test_simple_catch);
+    XCEPTEST_RUN_TEST(test_catch_all);
+    XCEPTEST_RUN_TEST(test_nested_handled_exception);
+    XCEPTEST_RUN_TEST(test_rethrow);
+    XCEPTEST_RUN_TEST(test_throw_from_catch);
+    XCEPTEST_RUN_TEST(test_nested_uncaught_propagation);
+    XCEPTEST_RUN_TEST(test_nested_rethrow);
+    XCEPTEST_RUN_TEST(test_resource_cleanup_with_finally);
+    XCEPTEST_RUN_TEST(test_volatile_variable_correctness);
+    XCEPTEST_RUN_TEST(test_multiple_catch_blocks);
+    XCEPTEST_RUN_TEST(test_try_finally_only);
+    XCEPTEST_RUN_TEST(test_uncaught_exception);
 
 #if XCEP_CONF_ENABLE_THREAD_SAFE
-    RUN_TEST(test_thread_safety_scalable);
+    XCEPTEST_RUN_TEST(test_thread_safety_scalable);
 #else
-    printf("   WARNING: Thread safety tests are disabled.\n");
+    printf("===== Warnings =====\n");
+    printf("   Thread safety tests are disabled.\n");
 #endif
 
-    printf("===== Test Suite Finished =====\n");
-    printf("Result: %d passed, %d failed.\n", g_tests_passed, g_tests_failed);
 
-    return (g_tests_failed == 0) ? 0 : 1;
+    printf("Result: %d passed, %d failed.\n", XCEPTEST_g_tests_passed, XCEPTEST_g_tests_failed);
+    printf("===============================\n");
+    return (XCEPTEST_g_tests_failed == 0) ? 0 : 1;
 }
