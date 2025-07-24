@@ -72,24 +72,24 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // =========================================================
 
 #if XCEP_CONF_ENABLE_CUSTOM_TYPES
-	typedef XCEP_CONF_CUSTOM_TYPE_BOOL XCEP_BOOL;
-	typedef XCEP_CONF_CUSTOM_TYPE_UINT XCEP_UINT;
-	typedef XCEP_CONF_CUSTOM_TYPE_INT XCEP_INT;
+	typedef XCEP_CONF_CUSTOM_TYPE_BOOL XCEP_t_Bool;
+	typedef XCEP_CONF_CUSTOM_TYPE_UINT XCEP_t_Uint;
+	typedef XCEP_CONF_CUSTOM_TYPE_INT XCEP_t_Int;
 	#define XCEP_TRUE XCEP_CONF_CUSTOM_TRUE
 	#define XCEP_FALSE XCEP_CONF_CUSTOM_FALSE
 #else
-	typedef bool XCEP_BOOL;
-	typedef unsigned int XCEP_UINT;
-	typedef int XCEP_INT;
-	#define XCEP_TRUE ((XCEP_BOOL)true)
-	#define XCEP_FALSE ((XCEP_BOOL)false)
+	typedef bool XCEP_t_Bool;
+	typedef unsigned int XCEP_t_Uint;
+	typedef int XCEP_t_Int;
+	#define XCEP_TRUE ((XCEP_t_Bool)true)
+	#define XCEP_FALSE ((XCEP_t_Bool)false)
 #endif
 
 typedef struct {
-	XCEP_INT code;
+	XCEP_t_Int code;
 	const char* message;
 #if XCEP_CONF_ENABLE_EXTRA_EXCEPTION_INFO
-	XCEP_INT line;
+	XCEP_t_Int line;
 	const char* file;
 	const char* function;
 #endif
@@ -98,11 +98,11 @@ typedef struct {
 typedef struct XCEP_t_Frame {
 	jmp_buf env;
 	struct {
-		XCEP_BOOL run_once : 1;
-		XCEP_BOOL thrown : 1;
-		XCEP_BOOL rethrow_requested : 1;
-		XCEP_BOOL thrown_in_catch: 1;
-		XCEP_BOOL have_been_handled: 1;
+		XCEP_t_Bool run_once : 1;
+		XCEP_t_Bool thrown : 1;
+		XCEP_t_Bool rethrow_requested : 1;
+		XCEP_t_Bool thrown_in_catch: 1;
+		XCEP_t_Bool have_been_handled: 1;
 	} state_flags;
 	struct XCEP_t_Frame* prev;
 } XCEP_t_Frame;
@@ -286,7 +286,7 @@ void XCEP___Thrown(const XCEP_t_Exception *inException) {
 void XCEP___EndTry(const XCEP_t_Frame *inCurrentFrame) {
 	XCEP_g_Stack = XCEP_g_Stack->prev;
 
-	const XCEP_BOOL vShouldPropagate =
+	const XCEP_t_Bool vShouldPropagate =
 			inCurrentFrame->state_flags.thrown == XCEP_TRUE && inCurrentFrame->state_flags.have_been_handled == XCEP_FALSE
 			|| (inCurrentFrame->state_flags.rethrow_requested || inCurrentFrame->state_flags.thrown_in_catch);
 

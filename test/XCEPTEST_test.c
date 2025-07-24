@@ -466,7 +466,7 @@ void* thread_worker(void *arg) {
     data->success_flag = 0;
 
     Try {
-        XCEPTEST_sleep(10 + (data->thread_id % 10));
+        XCEPTEST_Sleep(10 + (data->thread_id % 10));
         Throw(data->exception_result_code, data->message);
     }
     CatchAll {
@@ -524,7 +524,7 @@ int test_thread_safety_scalable() {
 }
 
 
-int XCEPTEST_run_tests() {
+int XCEPTEST_RunTest() {
 
     printf("===== XCEP Test Suite =====\n\n");
 

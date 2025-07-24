@@ -18,7 +18,7 @@ void XCEPTEST_ThreadJoin(const XCEPTEST_t_Thread thread) {
     CloseHandle(thread);
 }
 
-void XCEPTEST_sleep(const int milliseconds) {
+void XCEPTEST_Sleep(const int milliseconds) {
     Sleep(milliseconds);
 }
 
@@ -34,7 +34,7 @@ void XCEPTEST_ThreadJoin(XCEPTEST_t_Thread thread) {
     pthread_join(thread, NULL);
 }
 
-void XCEPTEST_sleep(int milliseconds) {
+void XCEPTEST_Sleep(int milliseconds) {
     usleep(milliseconds * 1000);
 }
 #endif

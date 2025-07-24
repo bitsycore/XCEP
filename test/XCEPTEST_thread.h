@@ -14,6 +14,6 @@ typedef void* (*XCEPTEST_t_ThreadProc)(void*);
 
 int XCEPTEST_ThreadCreate(XCEPTEST_t_Thread *thread, XCEPTEST_t_ThreadProc func, void *arg);
 void XCEPTEST_ThreadJoin(XCEPTEST_t_Thread thread);
-void XCEPTEST_sleep(int milliseconds);
+void XCEPTEST_Sleep(int milliseconds);
 
 #endif //XCEPPROJECT_CROSS_THREAD_H
