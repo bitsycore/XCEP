@@ -23,7 +23,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define XCEP_CDAD39BB4CBB62BD_H
 
 #include <setjmp.h>
-#include <stdbool.h>
+
 
 // =========================================================
 // MARK: Configuration
@@ -78,6 +78,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#define XCEP_TRUE XCEP_CONF_CUSTOM_TRUE
 	#define XCEP_FALSE XCEP_CONF_CUSTOM_FALSE
 #else
+#include <stdbool.h>
 	typedef bool XCEP_t_Bool;
 	typedef unsigned int XCEP_t_Uint;
 	typedef int XCEP_t_Int;
